@@ -27,6 +27,7 @@ public class NakadiClient {
   private final String certificatePath;
   private final boolean enablePublishingCompression;
   private final CompressionSupport compressionSupport;
+  private final PayloadSerializer payloadSerializer;
 
   private NakadiClient(Builder builder) {
     NakadiException.throwNonNull(builder.baseURI, "Please provide a base URI.");
@@ -39,6 +40,7 @@ public class NakadiClient {
     this.certificatePath = builder.certificatePath;
     this.enablePublishingCompression = builder.enablePublishingCompression;
     this.compressionSupport = builder.compressionSupport;
+    this.payloadSerializer = builder.payloadSerializer;
   }
 
   /**
@@ -101,6 +103,10 @@ public class NakadiClient {
     return enablePublishingCompression;
   }
 
+  public PayloadSerializer getPayloadSerializer() {
+    return payloadSerializer;
+  }
+
   /**
    * Access API resources from the client.
    */
@@ -123,6 +129,7 @@ public class NakadiClient {
     private boolean enablePublishingCompression;
     private CompressionSupport compressionSupport;
     private String certificatePath;
+    private PayloadSerializer payloadSerializer;
 
     Builder() {
       connectTimeout = 20_000;
@@ -143,6 +150,10 @@ public class NakadiClient {
 
       if (jsonSupport == null) {
         jsonSupport = new GsonSupport();
+      }
+
+      if (payloadSerializer == null) {
+        payloadSerializer = new JsonPayloadSerializer(jsonSupport);
       }
 
       if (compressionSupport == null) {
@@ -309,6 +320,11 @@ public class NakadiClient {
      */
     public Builder jsonSupport(JsonSupport jsonSupport) {
       this.jsonSupport = jsonSupport;
+      return this;
+    }
+
+    public Builder payloadSerializer(PayloadSerializer payloadSerializer) {
+      this.payloadSerializer = payloadSerializer;
       return this;
     }
   }

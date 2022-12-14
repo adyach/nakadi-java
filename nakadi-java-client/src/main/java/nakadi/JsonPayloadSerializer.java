@@ -13,9 +13,9 @@ public class JsonPayloadSerializer implements PayloadSerializer {
     }
 
     @Override
-    public <T> byte[] toBytes(String eventTypeName, Collection<T> events) {
+    public <T> byte[] toBytes(EventType eventType, Collection<T> events) {
         List<EventRecord<T>> collect =
-                events.stream().map(e -> new EventRecord<>(eventTypeName, e)).collect(Collectors.toList());
+                events.stream().map(e -> new EventRecord<>(eventType.name(), e)).collect(Collectors.toList());
         List<Object> eventList =
                 collect.stream().map(jsonSupport::transformEventRecord).collect(Collectors.toList());
 
@@ -24,7 +24,7 @@ public class JsonPayloadSerializer implements PayloadSerializer {
 
     @Override
     public String payloadMimeType() {
-        return "application/json; charset=utf8";
+        return ResourceSupport.APPLICATION_JSON_CHARSET_UTF_8;
     }
 
 }

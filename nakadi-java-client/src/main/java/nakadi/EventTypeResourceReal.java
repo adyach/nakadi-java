@@ -1,11 +1,18 @@
 package nakadi;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.gson.reflect.TypeToken;
+
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 class EventTypeResourceReal implements EventTypeResource {
 
@@ -29,9 +36,16 @@ class EventTypeResourceReal implements EventTypeResource {
 
   private final NakadiClient client;
   private volatile RetryPolicy retryPolicy;
+  private final LoadingCache<String, EventType> eventTypeCache;
 
   EventTypeResourceReal(NakadiClient client) {
     this.client = client;
+    this.eventTypeCache = CacheBuilder.newBuilder()
+            // fixme add client config for expiration
+            .refreshAfterWrite(10, TimeUnit.MINUTES)
+            .build(CacheLoader.asyncReloading(
+                    CacheLoader.from((eventTypeName) -> findByName(eventTypeName)),
+                    Executors.newSingleThreadExecutor()));
   }
 
   /**
@@ -153,6 +167,20 @@ class EventTypeResourceReal implements EventTypeResource {
       RateLimitException, NakadiException {
     return loadSchemaPage(
         collectionUri().path(eventTypeName).path(PATH_SCHEMAS).buildString());
+  }
+
+  @Override public EventType findByNameCached(String eventTypeName)
+          throws AuthorizationException, ClientException, ServerException,
+          RateLimitException, NakadiException {
+    try {
+      return eventTypeCache.get(eventTypeName);
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof RuntimeException) {
+        throw (RuntimeException) e.getCause();
+      } else {
+        throw new RuntimeException(e.getCause());
+      }
+    }
   }
 
   @Override public CursorCollection shift(String eventTypeName, List<Cursor> cursorList) {
