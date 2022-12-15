@@ -75,22 +75,6 @@ public interface EventTypeResource {
       RateLimitException, NotFoundException, NakadiException;
 
   /**
-   * @param eventTypeName the event type
-   * @return the event type
-   * @throws AuthorizationException unauthorised
-   * @throws ClientException for a 400 or generic client error
-   * @throws ServerException for a 5xx or generic server error
-   * @throws RateLimitException for a 429
-   * @throws ConflictException for a 409
-   * @throws NotFoundException for a 404
-   * @throws NakadiException for a general exception
-   */
-  @Experimental
-  EventType findByNameCached(String eventTypeName)
-          throws AuthorizationException, ClientException, ServerException,
-          RateLimitException, NakadiException;
-
-  /**
    * Try and find an event type.
    *
    * @param eventTypeName the event type name or {@link Optional#empty()} if not found

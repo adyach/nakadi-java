@@ -4,6 +4,7 @@ import nakadi.BusinessEventMapped;
 import nakadi.EventMetadata;
 import nakadi.EventType;
 import nakadi.EventTypeSchema;
+import nakadi.SerializationContext;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -15,10 +16,11 @@ public class AvroPayloadSerializerTest {
 
     @Test
     public void testToBytes() {
+        final String version = "1.0.0";
         EventTypeSchema eventTypeSchema = new EventTypeSchema()
                 .type(EventTypeSchema.Type.avro_schema)
                 .schema(schema)
-                .version("1.0.0");
+                .version(version);
         String name = "ad-2022-12-13";
         EventType eventType = new EventType().name(name);
         eventType.schema(eventTypeSchema);
@@ -30,7 +32,22 @@ public class AvroPayloadSerializerTest {
                         .data(bp);
 
         AvroPayloadSerializer avroPayloadSerializer = new AvroPayloadSerializer();
-        byte[] bytes = avroPayloadSerializer.toBytes(eventType, Collections.singletonList(event));
+        byte[] bytes = avroPayloadSerializer.toBytes(new SerializationContext() {
+            @Override
+            public String name() {
+                return name;
+            }
+
+            @Override
+            public String schema() {
+                return schema;
+            }
+
+            @Override
+            public String version() {
+                return version;
+            }
+        }, Collections.singletonList(event));
 
         System.out.println(new String(bytes));
     }

@@ -2,7 +2,6 @@ package nakadi;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
-import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.gson.reflect.TypeToken;
@@ -14,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,26 +32,29 @@ public class EventResourceReal implements EventResource {
 
   private final NakadiClient client;
   private final JsonSupport jsonSupport;
-  private final PayloadSerializer payloadSerializer;
   private volatile RetryPolicy retryPolicy;
   private volatile String flowId;
   private boolean enablePublishingCompression;
 
   private final CompressionSupport compressionSupport;
+  private final SerializationSupport serializationSupport;
 
   public EventResourceReal(NakadiClient client) {
-    this(client, client.jsonSupport(), client.compressionSupport(), client.getPayloadSerializer());
+    this(client, client.jsonSupport(), client.compressionSupport(), client.getSerializationSupport());
   }
 
   @VisibleForTesting
-  EventResourceReal(NakadiClient client, JsonSupport jsonSupport, CompressionSupport compressionSupport, PayloadSerializer payloadSerializer) {
+  EventResourceReal(NakadiClient client,
+                    JsonSupport jsonSupport,
+                    CompressionSupport compressionSupport,
+                    SerializationSupport serializationSupport) {
     this.client = client;
     this.jsonSupport = jsonSupport;
     this.compressionSupport = compressionSupport;
     if(client != null && client.enablePublishingCompression()) {
       this.enablePublishingCompression = true;
     }
-    this.payloadSerializer = payloadSerializer;
+    this.serializationSupport = serializationSupport;
   }
 
   private static Response timed(Supplier<Response> sender, NakadiClient client, int eventCount) {
@@ -116,14 +118,11 @@ public class EventResourceReal implements EventResource {
       throw new NakadiException(Problem.localProblem("event send called with zero events", ""));
     }
 
-    EventType eventType = client.resources().eventTypes().findByNameCached(eventTypeName);
-    // fixme event type has avro / json / proto schema before passing to seriazlizer
-
     if (new ArrayList<>(events).get(0) instanceof String) {
       return sendUsingSupplier(eventTypeName,
           () -> ("[" + Joiner.on(",").join(events) + "]").getBytes(Charsets.UTF_8), headers);
     } else {
-      return sendBatchOfEvents(eventType, events, headers);
+      return sendBatchOfEvents(eventTypeName, events, headers);
     }
   }
 
@@ -186,15 +185,15 @@ public class EventResourceReal implements EventResource {
                  1);
   }
 
-  private <T> Response sendBatchOfEvents(EventType eventType, Collection<T> events, Map<String, Object> headers) {
+  private <T> Response sendBatchOfEvents(String eventTypeName, Collection<T> events, Map<String, Object> headers) {
     NakadiException.throwNonNull(events, "Please provide one or more event records");
 
     final ContentSupplier supplier;
 
     if(enablePublishingCompression) {
-      supplier =  supplyObjectAsCompressedAndSetHeaders(eventType, events, headers);
+      supplier =  supplyObjectAsCompressedAndSetHeaders(eventTypeName, events, headers);
     } else {
-      supplier = () -> payloadSerializer.toBytes(eventType, events);
+      supplier = () -> serializationSupport.serializePayload(client, eventTypeName, events);
     }
 
     // todo: close
@@ -202,7 +201,7 @@ public class EventResourceReal implements EventResource {
                      .newResource()
                      .retryPolicy(retryPolicy)
                      .postEventsThrowing(
-                         collectionUri(eventType.name()).buildString(),
+                         collectionUri(eventTypeName).buildString(),
                          options(headers),
                              supplier),
               client,
@@ -216,7 +215,7 @@ public class EventResourceReal implements EventResource {
           options.flowId(flowId);
       }
       options.headers(headers);
-      options.header("Content-Type", payloadSerializer.payloadMimeType());
+      options.header("Content-Type", serializationSupport.contentType());
       return options;
   }
 
@@ -227,8 +226,8 @@ public class EventResourceReal implements EventResource {
         .path(PATH_COLLECTION);
   }
 
-  private <T> ContentSupplier supplyObjectAsCompressedAndSetHeaders(EventType eventType, Collection<T> sending, Map<String, Object> headers) {
-    final byte[] batchBytes = payloadSerializer.toBytes(eventType, sending);
+  private <T> ContentSupplier supplyObjectAsCompressedAndSetHeaders(String eventTypeName, Collection<T> sending, Map<String, Object> headers) {
+    final byte[] batchBytes = serializationSupport.serializePayload(client, eventTypeName, sending);
     return supplyBytesAsCompressedAndSetHeaders(batchBytes, headers);
   }
 

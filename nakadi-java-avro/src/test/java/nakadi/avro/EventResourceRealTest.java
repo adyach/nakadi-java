@@ -12,7 +12,6 @@ import nakadi.Resources;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-import org.junit.Test;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -69,12 +68,12 @@ public class EventResourceRealTest {
         }
     }
 
-//    @Test
+    //    @Test
     public void businessIsSentToServerMapped() throws Exception {
 
         NakadiClient client = spy(NakadiClient.newBuilder()
                 .baseURI("http://localhost:" + MOCK_SERVER_PORT)
-                .payloadSerializer(new AvroPayloadSerializer())
+                .serializationSupport(AvroSerializationSupport.newInstance())
                 .build());
 
         EventResource resource = client.resources().events();
@@ -97,7 +96,7 @@ public class EventResourceRealTest {
         when(client.resources()).thenReturn(resources);
         EventTypeResource eventTypeResource = mock(EventTypeResource.class);
         when(resources.eventTypes()).thenReturn(eventTypeResource);
-        when(eventTypeResource.findByNameCached("ad-2022-12-13"))
+        when(eventTypeResource.findByName("ad-2022-12-13"))
                 .thenReturn(eventType);
 
 

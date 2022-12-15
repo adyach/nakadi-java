@@ -8,6 +8,7 @@ dependencies {
     implementation project(path: ':nakadi-java-client', configuration: 'shadow')
     implementation project.libs.avro
     implementation project.libs.jacksonavro
+    implementation project.libs.guava
 
     testImplementation project.libs.junit
     testImplementation project.libs.mockito_core

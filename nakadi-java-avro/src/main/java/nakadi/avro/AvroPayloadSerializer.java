@@ -4,11 +4,9 @@ import com.fasterxml.jackson.dataformat.avro.AvroMapper;
 import com.fasterxml.jackson.dataformat.avro.AvroSchema;
 import nakadi.BusinessEventMapped;
 import nakadi.DataChangeEvent;
-import nakadi.Event;
 import nakadi.EventMetadata;
-import nakadi.EventType;
-import nakadi.EventTypeSchema;
 import nakadi.PayloadSerializer;
+import nakadi.SerializationContext;
 import org.apache.avro.Schema;
 import org.zalando.nakadi.generated.avro.Envelope;
 import org.zalando.nakadi.generated.avro.Metadata;
@@ -32,16 +30,10 @@ public class AvroPayloadSerializer implements PayloadSerializer {
     }
 
     @Override
-    public <T> byte[] toBytes(EventType eventType, Collection<T> events) {
-        final EventTypeSchema etSchema = eventType.schema();
-        if (etSchema.type() != EventTypeSchema.Type.avro_schema) {
-            throw new InvalidSchemaException(String.format("No Avro schema found for event type `%s`. " +
-                    "Update the event type to have latest schema as Avro schema ", eventType.name()));
-        }
-
+    public <T> byte[] toBytes(SerializationContext context, Collection<T> events) {
         try {
             final List<Envelope> envelops = events.stream()
-                    .map(event -> toEnvelope(eventType, event))
+                    .map(event -> toEnvelope(context, event))
                     .collect(Collectors.toList());
             return PublishingBatch.newBuilder().setEvents(envelops)
                     .build().toByteBuffer().array();
@@ -50,7 +42,7 @@ public class AvroPayloadSerializer implements PayloadSerializer {
         }
     }
 
-    private <T> Envelope toEnvelope(EventType eventType, T event) {
+    private <T> Envelope toEnvelope(SerializationContext context, T event) {
         try {
             final EventMetadata metadata;
             final Object data;
@@ -66,13 +58,13 @@ public class AvroPayloadSerializer implements PayloadSerializer {
             }
 
             final byte[] eventBytes = avroMapper.writer(
-                    new AvroSchema(new Schema.Parser().parse(eventType.schema().schema())))
+                    new AvroSchema(new Schema.Parser().parse(context.schema())))
                     .writeValueAsBytes(data);
 
             return Envelope.newBuilder()
                     .setMetadata(Metadata.newBuilder()
-                            .setEventType(metadata.eventType())
-                            .setVersion(eventType.schema().version())
+                            .setEventType(context.name()) // metadata.eventType ?
+                            .setVersion(context.version())
                             .setOccurredAt(metadata.occurredAt().toInstant())
                             .setEid(metadata.eid())
                             .setPartition(metadata.partition())
@@ -85,8 +77,4 @@ public class AvroPayloadSerializer implements PayloadSerializer {
         }
     }
 
-    @Override
-    public String payloadMimeType() {
-        return "application/avro-binary";
-    }
 }
