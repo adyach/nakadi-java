@@ -42,6 +42,30 @@ public class AvroPublishingBatchSerializerTest {
         Assert.assertEquals(bp, actual);
     }
 
+    @Test
+    public void testToBytes() throws IOException {
+        BusinessPayload bp = new BusinessPayload("22", "A", "B");
+        BusinessEventMapped<BusinessPayload> event =
+                new BusinessEventMapped<BusinessPayload>()
+                        .metadata(EventMetadata.newPreparedEventMetadata())
+                        .data(bp);
+
+        AvroPublishingBatchSerializer avroPublishingBatchSerializer = new AvroPublishingBatchSerializer(new AvroMapper());
+        byte[] bytesBatch = avroPublishingBatchSerializer.toBytes(
+                new TestSerializationContext("ad-2022-12-13", schema, "1.0.0"),
+                Collections.singletonList(event)
+        );
+
+        PublishingBatch publishingBatch = PublishingBatch.fromByteBuffer(ByteBuffer.wrap(bytesBatch));
+        byte[] eventBytes = publishingBatch.getEvents().get(0).getPayload().array();
+        BusinessPayload actual = new AvroMapper().reader(
+                new AvroSchema(new Schema.Parser().parse(schema)))
+                .readValue(eventBytes, BusinessPayload.class);
+
+        Assert.assertEquals(bp, actual);
+    }
+
+
     static class BusinessPayload {
         String id;
         String a;

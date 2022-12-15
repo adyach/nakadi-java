@@ -215,7 +215,7 @@ public class EventResourceReal implements EventResource {
           options.flowId(flowId);
       }
       options.headers(headers);
-      options.header("Content-Type", serializationSupport.contentType());
+      options.header(ResourceOptions.HEADER_CONTENT_TYPE, serializationSupport.contentType());
       return options;
   }
 
