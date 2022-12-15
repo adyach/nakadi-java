@@ -27,7 +27,7 @@ public class AvroPublishingBatchSerializerTest {
                         .metadata(EventMetadata.newPreparedEventMetadata())
                         .data(bp);
 
-        AvroPublishingBatchSerializer avroPublishingBatchSerializer = new AvroPublishingBatchSerializer();
+        AvroPublishingBatchSerializer avroPublishingBatchSerializer = new AvroPublishingBatchSerializer(new AvroMapper());
         byte[] bytesBatch = avroPublishingBatchSerializer.toBytes(
                 new TestSerializationContext("ad-2022-12-13", schema, "1.0.0"),
                 Collections.singletonList(event)

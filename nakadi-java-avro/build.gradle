@@ -6,13 +6,11 @@ apply plugin: "com.github.davidmc24.gradle.plugin.avro-base"
 
 dependencies {
     implementation project(path: ':nakadi-java-client', configuration: 'shadow')
+    // avro is required by gradle avro plugin https://github.com/davidmc24/gradle-avro-plugin
     implementation project.libs.avro
     implementation project.libs.jacksonavro
-    implementation project.libs.guava
 
     testImplementation project.libs.junit
-    testImplementation project.libs.mockito_core
-    testImplementation project.libs.okhttp3mockwebserver
 }
 
 sourceSets {

@@ -1,5 +1,6 @@
 package nakadi.avro;
 
+import com.fasterxml.jackson.dataformat.avro.AvroMapper;
 import nakadi.EventType;
 import nakadi.EventTypeSchema;
 import nakadi.NakadiClient;
@@ -21,14 +22,14 @@ public class AvroSerializationSupport implements SerializationSupport {
     }
 
     public static SerializationSupport newInstance() {
-        return new AvroSerializationSupport(new AvroPublishingBatchSerializer());
+        return new AvroSerializationSupport(new AvroPublishingBatchSerializer(new AvroMapper()));
     }
 
     @Override
     public <T> byte[] serializePayload(NakadiClient client, String eventTypeName, Collection<T> events) {
-        SerializationContext context = contextCache.computeIfAbsent(eventTypeName,
-                (et) -> new AvroSerializationContext(client.resources()
-                        .eventTypes().findByName(eventTypeName)));
+        SerializationContext context = contextCache.computeIfAbsent(
+                eventTypeName, (et) -> new AvroSerializationContext(
+                        client.resources().eventTypes().findByName(et)));
         return payloadSerializer.toBytes(context, events);
     }
 
@@ -37,7 +38,7 @@ public class AvroSerializationSupport implements SerializationSupport {
         return "application/avro-binary";
     }
 
-    private class AvroSerializationContext implements SerializationContext {
+    private static class AvroSerializationContext implements SerializationContext {
 
         private final EventType eventType;
 

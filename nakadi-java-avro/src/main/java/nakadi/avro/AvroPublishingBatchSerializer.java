@@ -1,5 +1,6 @@
 package nakadi.avro;
 
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.dataformat.avro.AvroMapper;
 import com.fasterxml.jackson.dataformat.avro.AvroSchema;
 import nakadi.BusinessEventMapped;
@@ -16,6 +17,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -24,28 +27,30 @@ import java.util.stream.Collectors;
 public class AvroPublishingBatchSerializer implements PublishingBatchSerializer {
 
     private AvroMapper avroMapper;
+    private Map<String, ObjectWriter> objectWriterCache;
 
-    public AvroPublishingBatchSerializer() {
-        this.avroMapper = new AvroMapper();
+    public AvroPublishingBatchSerializer(AvroMapper avroMapper) {
+        this.avroMapper = avroMapper;
+        this.objectWriterCache = new ConcurrentHashMap<>();
     }
 
     @Override
     public <T> byte[] toBytes(SerializationContext context, Collection<T> events) {
         try {
-            final List<Envelope> envelops = events.stream()
+            List<Envelope> envelops = events.stream()
                     .map(event -> toEnvelope(context, event))
                     .collect(Collectors.toList());
             return PublishingBatch.newBuilder().setEvents(envelops)
                     .build().toByteBuffer().array();
         } catch (IOException io) {
-            throw new RuntimeException();
+            throw new RuntimeException(io);
         }
     }
 
     private <T> Envelope toEnvelope(SerializationContext context, T event) {
         try {
-            final EventMetadata metadata;
-            final Object data;
+            EventMetadata metadata;
+            Object data;
             if (event instanceof BusinessEventMapped) {
                 metadata = ((BusinessEventMapped) event).metadata();
                 data = ((BusinessEventMapped) event).data();
@@ -57,8 +62,8 @@ public class AvroPublishingBatchSerializer implements PublishingBatchSerializer 
                         event.getClass() + "` provided during avro serialization");
             }
 
-            final byte[] eventBytes = avroMapper.writer(
-                    new AvroSchema(new Schema.Parser().parse(context.schema())))
+            byte[] eventBytes = objectWriterCache.computeIfAbsent(context.name(),
+                    (et) -> avroMapper.writer(new AvroSchema(new Schema.Parser().parse(context.schema()))))
                     .writeValueAsBytes(data);
 
             return Envelope.newBuilder()
