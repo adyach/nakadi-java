@@ -4,13 +4,10 @@ import com.fasterxml.jackson.dataformat.avro.AvroMapper;
 import com.fasterxml.jackson.dataformat.avro.AvroSchema;
 import nakadi.BusinessEventMapped;
 import nakadi.EventMetadata;
-import nakadi.EventType;
-import nakadi.EventTypeSchema;
 import nakadi.SerializationContext;
 import org.apache.avro.Schema;
 import org.junit.Assert;
 import org.junit.Test;
-import org.zalando.nakadi.generated.avro.Envelope;
 import org.zalando.nakadi.generated.avro.PublishingBatch;
 
 import java.io.IOException;
@@ -24,42 +21,23 @@ public class AvroPublishingBatchSerializerTest {
 
     @Test
     public void testToBytes() throws IOException {
-        final String version = "1.0.0";
-        EventTypeSchema eventTypeSchema = new EventTypeSchema()
-                .type(EventTypeSchema.Type.avro_schema)
-                .schema(schema)
-                .version(version);
-        String name = "ad-2022-12-13";
-        EventType eventType = new EventType().name(name);
-        eventType.schema(eventTypeSchema);
-
         BusinessPayload bp = new BusinessPayload("22", "A", "B");
         BusinessEventMapped<BusinessPayload> event =
                 new BusinessEventMapped<BusinessPayload>()
-                        .metadata(EventMetadata.newPreparedEventMetadata().eventType(name))
+                        .metadata(EventMetadata.newPreparedEventMetadata())
                         .data(bp);
 
         AvroPublishingBatchSerializer avroPublishingBatchSerializer = new AvroPublishingBatchSerializer();
-        byte[] bytesBatch = avroPublishingBatchSerializer.toBytes(new SerializationContext() {
-            @Override
-            public String name() {
-                return name;
-            }
-
-            @Override
-            public String schema() {
-                return schema;
-            }
-
-            @Override
-            public String version() {
-                return version;
-            }
-        }, Collections.singletonList(event));
+        byte[] bytesBatch = avroPublishingBatchSerializer.toBytes(
+                new TestSerializationContext("ad-2022-12-13", schema, "1.0.0"),
+                Collections.singletonList(event)
+        );
 
         PublishingBatch publishingBatch = PublishingBatch.fromByteBuffer(ByteBuffer.wrap(bytesBatch));
-        BusinessPayload actual = new AvroMapper().reader(new AvroSchema(new Schema.Parser().parse(schema)))
-                .readValue(publishingBatch.getEvents().get(0).getPayload().array(), BusinessPayload.class);
+        byte[] eventBytes = publishingBatch.getEvents().get(0).getPayload().array();
+        BusinessPayload actual = new AvroMapper().reader(
+                new AvroSchema(new Schema.Parser().parse(schema)))
+                .readValue(eventBytes, BusinessPayload.class);
 
         Assert.assertEquals(bp, actual);
     }
@@ -123,6 +101,34 @@ public class AvroPublishingBatchSerializerTest {
         @Override
         public int hashCode() {
             return Objects.hash(id, a, b);
+        }
+    }
+
+    private class TestSerializationContext implements SerializationContext {
+
+        private String name;
+        private String schema;
+        private String version;
+
+        public TestSerializationContext(String name, String schema, String version) {
+            this.name = name;
+            this.schema = schema;
+            this.version = version;
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public String schema() {
+            return schema;
+        }
+
+        @Override
+        public String version() {
+            return version;
         }
     }
 }
