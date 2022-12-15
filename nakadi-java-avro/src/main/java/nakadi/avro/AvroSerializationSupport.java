@@ -43,8 +43,9 @@ public class AvroSerializationSupport implements SerializationSupport {
 
         private AvroSerializationContext(EventType eventType) {
             if (eventType.schema().type() != EventTypeSchema.Type.avro_schema) {
-                throw new InvalidSchemaException(String.format("No Avro schema found for event type `%s`. " +
-                        "Update the event type to have latest schema as Avro schema ", eventType.name()));
+                throw new InvalidSchemaException(String.format(
+                        "Event type `%s` schema is `%s`, but expected Avro",
+                        eventType.name(), eventType.schema().type()));
             }
 
             this.eventType = eventType;
