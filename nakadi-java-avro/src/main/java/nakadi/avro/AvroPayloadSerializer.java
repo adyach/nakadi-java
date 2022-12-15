@@ -4,6 +4,7 @@ import com.fasterxml.jackson.dataformat.avro.AvroMapper;
 import com.fasterxml.jackson.dataformat.avro.AvroSchema;
 import nakadi.BusinessEventMapped;
 import nakadi.DataChangeEvent;
+import nakadi.Event;
 import nakadi.EventMetadata;
 import nakadi.EventType;
 import nakadi.EventTypeSchema;
@@ -52,10 +53,13 @@ public class AvroPayloadSerializer implements PayloadSerializer {
     private <T> Envelope toEnvelope(EventType eventType, T event) {
         try {
             final EventMetadata metadata;
+            final Object data;
             if (event instanceof BusinessEventMapped) {
                 metadata = ((BusinessEventMapped) event).metadata();
+                data = ((BusinessEventMapped) event).data();
             } else if (event instanceof DataChangeEvent) {
                 metadata = ((DataChangeEvent) event).metadata();
+                data = ((DataChangeEvent) event).data();
             } else {
                 throw new InvalidEventTypeException("Unexpected event category `" +
                         event.getClass() + "` provided during avro serialization");
@@ -63,7 +67,7 @@ public class AvroPayloadSerializer implements PayloadSerializer {
 
             final byte[] eventBytes = avroMapper.writer(
                     new AvroSchema(new Schema.Parser().parse(eventType.schema().schema())))
-                    .writeValueAsBytes(event);
+                    .writeValueAsBytes(data);
 
             return Envelope.newBuilder()
                     .setMetadata(Metadata.newBuilder()
@@ -77,7 +81,7 @@ public class AvroPayloadSerializer implements PayloadSerializer {
                     .setPayload(ByteBuffer.wrap(eventBytes))
                     .build();
         } catch (IOException io) {
-            throw new RuntimeException();
+            throw new RuntimeException(io);
         }
     }
 
