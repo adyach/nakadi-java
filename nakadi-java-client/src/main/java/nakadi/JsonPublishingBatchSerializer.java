@@ -3,11 +3,11 @@ package nakadi;
 import java.util.Collection;
 import java.util.stream.Collectors;
 
-public class JsonPayloadSerializer implements PayloadSerializer {
+public class JsonPublishingBatchSerializer implements PublishingBatchSerializer {
 
     private final JsonSupport jsonSupport;
 
-    public JsonPayloadSerializer(final JsonSupport jsonSupport) {
+    public JsonPublishingBatchSerializer(final JsonSupport jsonSupport) {
         this.jsonSupport = jsonSupport;
     }
 

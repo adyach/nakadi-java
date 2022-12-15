@@ -4,14 +4,14 @@ import java.util.Collection;
 
 public class JsonSerializationSupport implements SerializationSupport {
 
-    private final JsonPayloadSerializer payloadSerializer;
+    private final JsonPublishingBatchSerializer payloadSerializer;
 
-    public JsonSerializationSupport(JsonPayloadSerializer payloadSerializer) {
+    public JsonSerializationSupport(JsonPublishingBatchSerializer payloadSerializer) {
         this.payloadSerializer = payloadSerializer;
     }
 
     public static SerializationSupport newInstance(JsonSupport jsonSupport) {
-        return new JsonSerializationSupport(new JsonPayloadSerializer(jsonSupport));
+        return new JsonSerializationSupport(new JsonPublishingBatchSerializer(jsonSupport));
     }
 
     @Override

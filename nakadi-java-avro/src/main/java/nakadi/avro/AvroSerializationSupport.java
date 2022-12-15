@@ -12,16 +12,16 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AvroSerializationSupport implements SerializationSupport {
 
-    private final AvroPayloadSerializer payloadSerializer;
+    private final AvroPublishingBatchSerializer payloadSerializer;
     private final Map<String, SerializationContext> contextCache;
 
-    public AvroSerializationSupport(AvroPayloadSerializer payloadSerializer) {
+    public AvroSerializationSupport(AvroPublishingBatchSerializer payloadSerializer) {
         this.payloadSerializer = payloadSerializer;
         this.contextCache = new ConcurrentHashMap<>();
     }
 
     public static SerializationSupport newInstance() {
-        return new AvroSerializationSupport(new AvroPayloadSerializer());
+        return new AvroSerializationSupport(new AvroPublishingBatchSerializer());
     }
 
     @Override

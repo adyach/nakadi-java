@@ -5,7 +5,7 @@ import com.fasterxml.jackson.dataformat.avro.AvroSchema;
 import nakadi.BusinessEventMapped;
 import nakadi.DataChangeEvent;
 import nakadi.EventMetadata;
-import nakadi.PayloadSerializer;
+import nakadi.PublishingBatchSerializer;
 import nakadi.SerializationContext;
 import org.apache.avro.Schema;
 import org.zalando.nakadi.generated.avro.Envelope;
@@ -21,11 +21,11 @@ import java.util.stream.Collectors;
 /**
  * The serializer uses jackson extension to serialize business pojos to avro events.
  */
-public class AvroPayloadSerializer implements PayloadSerializer {
+public class AvroPublishingBatchSerializer implements PublishingBatchSerializer {
 
     private AvroMapper avroMapper;
 
-    public AvroPayloadSerializer() {
+    public AvroPublishingBatchSerializer() {
         this.avroMapper = new AvroMapper();
     }
 

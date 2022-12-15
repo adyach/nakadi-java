@@ -2,7 +2,7 @@ package nakadi;
 
 import java.util.Collection;
 
-public interface PayloadSerializer {
+public interface PublishingBatchSerializer {
 
     <T> byte[] toBytes(SerializationContext context, Collection<T> payloadEntities);
 

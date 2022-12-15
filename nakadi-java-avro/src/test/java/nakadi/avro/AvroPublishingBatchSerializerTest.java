@@ -1,21 +1,29 @@
 package nakadi.avro;
 
+import com.fasterxml.jackson.dataformat.avro.AvroMapper;
+import com.fasterxml.jackson.dataformat.avro.AvroSchema;
 import nakadi.BusinessEventMapped;
 import nakadi.EventMetadata;
 import nakadi.EventType;
 import nakadi.EventTypeSchema;
 import nakadi.SerializationContext;
+import org.apache.avro.Schema;
+import org.junit.Assert;
 import org.junit.Test;
+import org.zalando.nakadi.generated.avro.Envelope;
+import org.zalando.nakadi.generated.avro.PublishingBatch;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Objects;
 
-public class AvroPayloadSerializerTest {
+public class AvroPublishingBatchSerializerTest {
 
     private final String schema = "{\"type\":\"record\",\"name\":\"BusinessPayload\",\"fields\":[{\"name\":\"a\",\"type\":[\"null\",\"string\"]},{\"name\":\"b\",\"type\":[\"null\",\"string\"]},{\"name\":\"id\",\"type\":[\"null\",\"string\"]}]}";
 
     @Test
-    public void testToBytes() {
+    public void testToBytes() throws IOException {
         final String version = "1.0.0";
         EventTypeSchema eventTypeSchema = new EventTypeSchema()
                 .type(EventTypeSchema.Type.avro_schema)
@@ -31,8 +39,8 @@ public class AvroPayloadSerializerTest {
                         .metadata(EventMetadata.newPreparedEventMetadata().eventType(name))
                         .data(bp);
 
-        AvroPayloadSerializer avroPayloadSerializer = new AvroPayloadSerializer();
-        byte[] bytes = avroPayloadSerializer.toBytes(new SerializationContext() {
+        AvroPublishingBatchSerializer avroPublishingBatchSerializer = new AvroPublishingBatchSerializer();
+        byte[] bytesBatch = avroPublishingBatchSerializer.toBytes(new SerializationContext() {
             @Override
             public String name() {
                 return name;
@@ -49,13 +57,20 @@ public class AvroPayloadSerializerTest {
             }
         }, Collections.singletonList(event));
 
-        System.out.println(new String(bytes));
+        PublishingBatch publishingBatch = PublishingBatch.fromByteBuffer(ByteBuffer.wrap(bytesBatch));
+        BusinessPayload actual = new AvroMapper().reader(new AvroSchema(new Schema.Parser().parse(schema)))
+                .readValue(publishingBatch.getEvents().get(0).getPayload().array(), BusinessPayload.class);
+
+        Assert.assertEquals(bp, actual);
     }
 
     static class BusinessPayload {
         String id;
         String a;
         String b;
+
+        public BusinessPayload() {
+        }
 
         public BusinessPayload(String id, String a, String b) {
             this.id = id;
